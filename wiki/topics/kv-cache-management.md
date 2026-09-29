@@ -25,6 +25,21 @@
 | [Mooncake](../sources/mooncake.md), FAST 2025 | 长 context 与重复 prefix 造成重复 prefill、GPU KV 容量受限 | P/D 解耦、全局 KV store、CPU/DRAM/SSD/RDMA、多级放置和调度 | 收益依赖复用率、存储资源、互连及 workload/SLO |
 | [FlashInfer](../sources/flashinfer.md), MLSys 2025 | KV layout 和 attention 变体多，专用 kernel 难维护且负载不均 | block-sparse/composable layout、JIT attention template、动态调度 | 解决 kernel/runtime 数据路径，不定义 KV 生命周期或全局控制面 |
 
+近期扩展的 serving 先例进一步细化了“驻留、选择、执行”的边界：
+
+| 工作 | 已有机制 | 对跨层 KV 研究的含义 |
+|---|---|---|
+| [LayerKV](../sources/layerkv.md) | layer-wise block allocation/offload 与 SLO scheduler | layer-level capacity allocation 已有先例；不等于 selection 后 token-level 访问规划 |
+| [IceCache](../sources/icecache.md) | 语义聚类页、动态目录、GQA union、bulk backload | 页组织和 union 搬运需要作为 baseline |
+| [SPIN](../sources/spin.md) | 统一 sparse substrate、动态 HBM cache、工作集 metadata | 通用分层缓存抽象和管理不是空白 |
+| [HiSparse](../sources/hisparse.md) | exact selector resolution、固定 GPU cache、层间预取 | host fetch/cache 路线应与 CPU partial attention 同 mask 比较 |
+| [Fluxion](../sources/fluxion.md) | output-aware budget、head/granularity 配置、CPU/GPU 调度 | hybrid attention 已有直接先例，需比较同一选集的物理分区 |
+| [ScoutAttention](../sources/scoutattention.md) | layer-ahead CPU precomputation 和异步 recall | 跨层计算重叠已有先例，预测误差需计入质量 |
+| [Strata](../sources/strata.md) | 分层 context cache 与 GPU-assisted I/O | 数据布局转换和较大范围 transfer overlap 需标明工作负载差异 |
+| [DirectKV](../sources/directkv.md) | GH200 NVLink-C2C 上 zero-copy 访问 host KV | 是强 host-memory 路径，但不能外推到 PCIe+CXL |
+| [SWARM](../sources/swarm.md) | co-activation cluster、跨 SSD placement/replication | 利用共同访问布局已有先例，介质和时间粒度不同 |
+| [CXL KV storage exploration](../sources/exploring-cxl-kv-storage.md) | CXL prefix/KV cache 的传输与 serving ROI 评估 | 提供 CXL 容量动机，不等于 sparse decode 数据路径结果 |
+
 ## 跨论文综合
 
 ### KV ownership 和数据位置是不同选择

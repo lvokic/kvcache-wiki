@@ -1,6 +1,6 @@
 # Wiki index
 
-**Scope:** LLM KV cache management and serving systems, with a current emphasis on sparse attention, ANNS indexing, and memory tiers. The ingested set contains two surveys and sixteen systems/algorithm papers.
+**Scope:** LLM KV cache management and serving systems, with a current emphasis on sparse attention, ANNS indexing, and memory tiers. The ingested set contains two surveys and 37 systems/algorithm papers, including the owner's anonymized CXL-Vector submission manuscript.
 
 ## Overview
 
@@ -22,6 +22,16 @@
 - [vAttention](sources/vattention.md) — CUDA virtual memory for dynamic KV allocation; ASPLOS 2025.
 - [Mooncake](sources/mooncake.md) — global KV cache, disaggregation, and tiered storage; FAST 2025.
 - [FlashInfer](sources/flashinfer.md) — block-sparse KV layouts and a customizable attention engine; MLSys 2025.
+- [LayerKV](sources/layerkv.md) — layer-wise KV allocation/offload with an SLO-aware scheduler; arXiv v3, 2024.
+- [IceCache](sources/icecache.md) — semantic KV clustering, dynamic page mapping, and GQA-aware backload; ICLR 2026.
+- [SPIN](sources/spin.md) — unified sparse-attention substrate and hierarchical KV management; arXiv 2026.
+- [Fluxion](sources/fluxion.md) — output-aware sparse budgets and CPU/GPU hybrid attention scheduling; arXiv 2026.
+- [HiSparse](sources/hisparse.md) — exact sparse-selection resolution over host KV with bounded GPU cache; arXiv 2026.
+- [ScoutAttention](sources/scoutattention.md) — layer-ahead CPU precomputation for GPU/CPU KV offload; DAC 2026.
+- [Strata](sources/strata.md) — hierarchical context caching and GPU-assisted I/O; OSDI 2026.
+- [DirectKV](sources/directkv.md) — zero-copy KV offload on NVLink-C2C CPU/GPU systems; OSDI 2026.
+- [SWARM](sources/swarm.md) — co-activation-aware placement across multiple SSDs; arXiv 2026.
+- [Exploring CXL-based KV Cache Storage](sources/exploring-cxl-kv-storage.md) — CXL KV/prefix storage and serving economics; NeurIPS 2024 ML Systems workshop.
 
 ### Sparse attention and vector retrieval
 
@@ -30,6 +40,13 @@
 - [RetrievalAttention](sources/retrievalattention.md) — OOD-aware ANNS over KV keys with CPU/GPU co-execution; NeurIPS 2025.
 - [RoarGraph](sources/roargraph.md) — query-distribution-aware projected graph for OOD ANNS; PVLDB 2024.
 - [RetroInfer](sources/retroinfer.md) — attention-aware cluster index and GPU/CPU KV buffer manager; PVLDB 2026.
+- [CompactAttention](sources/compactattention.md) — GQA-aware block union and in-place KV tables for chunked prefill; arXiv 2026.
+- [MiniMax Sparse Attention](sources/minimax-sparse-attention.md) — trained per-GQA-group block selector and KV-outer kernel; arXiv 2026.
+- [Louver](sources/louver.md) — halfspace range-search index with a threshold-relative zero-false-negative guarantee; arXiv 2026.
+- [Verified vAttention](sources/vattention-verified.md) — top-k plus sampling with user-specified approximation guarantees; ICLR 2026. Distinct from the CUDA VMM paper above.
+- [Self-Indexing KVCache](sources/self-indexing-kvcache.md) — compressed sign-based keys double as the sparse retrieval structure; AAAI 2026.
+- [SALS](sources/sals.md) — latent-space KV compression and sparse selection with RoPE-aware design; arXiv 2025.
+- [FreshDiskANN](sources/freshdiskann.md) — concurrent graph-ANN insert/delete/search and streaming index maintenance; arXiv 2021.
 
 ### CXL and sparse-attention serving
 
@@ -37,6 +54,10 @@
 - [Beluga](sources/beluga.md) — shared CXL memory pool for multi-host KV cache management; SIGMOD 2026.
 - [SAC](sources/sac.md) — sparse-attention top-k KV reads from disaggregated CXL; arXiv preprint 2026.
 - [ECHO](sources/echo.md) — host KV offload and lossless prefetch for native sparse-attention serving; OSDI 2026.
+- [CXL-Vector](sources/cxl-vector.md) — DRAM-resident graph/code navigation with original-vector reranking from memory-only CXL; owner-provided anonymized SIGMOD ’27 submission P1297.
+- [COSMOS](sources/cosmos-cxl-anns.md) — general-purpose cores inside CXL devices for full in-memory ANNS; IEEE Computer Architecture Letters 2025.
+- [PNM-KV](sources/pnm-kv.md) — CXL-attached processing-near-memory for KV selection and attention; PACT 2025.
+- [TRACE](sources/trace-cxl.md) — bit-plane layout, lossless compression, and precision-proportional CXL fetch; arXiv v3, 2026.
 
 ## Topics
 
@@ -53,4 +74,4 @@ _No saved query analyses yet._
 
 ## Raw queue
 
-All PDFs currently in `raw/` and `raw/papers/` have a source note. Newly collected system papers are cataloged in [raw/papers/README.md](../raw/papers/README.md).
+All 39 PDFs currently in `raw/papers/` have a source note. The complete paper catalog is [raw/papers/README.md](../raw/papers/README.md).

@@ -37,3 +37,12 @@ Append new entries below. Use the format `## [YYYY-MM-DD] kind | description`.
 - Moved the seven already-ingested root-level PDFs into `raw/papers/`, preserving their filenames and contents.
 - Updated source-note links and completed [`raw/papers/README.md`](../raw/papers/README.md) as the catalog of all 18 ingested papers.
 - Replaced a stale Quest cross-reference in the InfiniGen source note with the existing Quest note.
+
+## [2026-09-29] ingest | Broaden CXL, sparse-attention, and physical-planning related work
+
+- Ingested 20 additional external papers and the owner-provided [CXL-Vector anonymized SIGMOD ’27 submission manuscript](sources/cxl-vector.md); the corpus now contains 39 PDFs, each with a source note.
+- Added direct serving and execution comparisons: [IceCache](sources/icecache.md), [SPIN](sources/spin.md), [Fluxion](sources/fluxion.md), [HiSparse](sources/hisparse.md), [ScoutAttention](sources/scoutattention.md), [CompactAttention](sources/compactattention.md), [LayerKV](sources/layerkv.md), [Strata](sources/strata.md), [DirectKV](sources/directkv.md), and [SWARM](sources/swarm.md).
+- Added selector/compression and index-maintenance references: [MiniMax Sparse Attention](sources/minimax-sparse-attention.md), [Louver](sources/louver.md), [Verified vAttention](sources/vattention-verified.md), [Self-Indexing KVCache](sources/self-indexing-kvcache.md), [SALS](sources/sals.md), and [FreshDiskANN](sources/freshdiskann.md).
+- Added CXL data-path and ANN comparisons: [Exploring CXL KV Storage](sources/exploring-cxl-kv-storage.md), [COSMOS](sources/cosmos-cxl-anns.md), [PNM-KV](sources/pnm-kv.md), and [TRACE](sources/trace-cxl.md).
+- Moved all new PDFs into `raw/papers/`, preserving the supplied CXL-Vector filename and contents, and appended all 21 entries to [the paper catalog](../raw/papers/README.md).
+- Updated the [index](index.md), [overview](overview.md), [KV cache topic](topics/kv-cache-management.md), and [sparse attention/CXL/ANNS synthesis](topics/sparse-attention-cxl-anns.md). The refreshed synthesis narrows the proposal hypothesis to fixed-selection, physical-footprint-aware routing within a KV group; this remains an experimental question, not an established novelty claim.

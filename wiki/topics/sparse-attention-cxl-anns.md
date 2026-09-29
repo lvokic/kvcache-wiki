@@ -14,6 +14,17 @@
 | [Beluga](../sources/beluga.md) | 未作 end-to-end sparse attention | 是 | 否；论文将 vector/graph DB 列为潜在方向 | 多主机共享 CXL KV pool，并测 sparse-token 传输 microbenchmark |
 | [ECHO](../sources/echo.md) | 是，native sparse | 否，host memory | 否，使用 DSA indexer | offload/cache manager/prefetch，不是 CXL pool |
 | [RetroInfer](../sources/retroinfer.md) | 是，dynamic sparsity | 否，CPU memory | 是，cluster-based wave index | index 与 GPU/CPU buffer manager 联合设计 |
+| [CXL-Vector](../sources/cxl-vector.md) | 否 | 是，memory-only CXL | 是，HNSW/NSG | 本仓库用户提供的匿名 SIGMOD ’27 稿件；DRAM 压缩导航、CXL 原向量候选重排，尚非 attention 工作 |
+| [COSMOS](../sources/cosmos-cxl-anns.md) | 否 | 是，CXL endpoint | 是，通用 graph ANNS | CXL device 内有通用核心，和 memory-only 路线硬件假设不同 |
+| [IceCache](../sources/icecache.md) | 是，token selection | 否，CPU/DRAM | 否 | 动态语义页、GQA union、批量 backload |
+| [SPIN](../sources/spin.md) | 是，多种 sparse selector | 否，host memory | 否 | 统一 page substrate、动态 HBM budget 和分层 metadata |
+| [Fluxion](../sources/fluxion.md) | 是，hybrid sparse attention | 否，CPU/GPU host path | 否 | output-aware budget、granularity selection、CPU/GPU 调度 |
+| [HiSparse](../sources/hisparse.md) | 是，exact selection resolve | 否，host memory | 否 | bounded GPU cache 与 exact layerwise fetch/prefetch |
+| [ScoutAttention](../sources/scoutattention.md) | 是，CPU/GPU co-attention | 否，host memory | 否 | layer-ahead query 预测和异步 recall |
+| [CompactAttention](../sources/compactattention.md) | 是，chunked prefill | 否 | 否 | mask 转 GQA-aware paged block tables；属于 prefill 场景 |
+| [Exploring CXL KV Storage](../sources/exploring-cxl-kv-storage.md) | 否，prefix/KV reuse | 是 | 否 | CXL KV capacity 与复用经济性，不含 sparse decode |
+| [PNM-KV](../sources/pnm-kv.md) | 有 token/page selection | 是，CXL-attached PNM | 否 | 选择与 attention 部分移到定制近存加速器 |
+| [TRACE](../sources/trace-cxl.md) | 否 | 是，CXL.mem | 否 | 设备内部 bit-plane layout、压缩和精度相关读取 |
 
 这张矩阵区分两种常被统称为“index”的组件：DSA 的 learned score indexer 产生 token 排序；ANN/vector index 负责从大量向量中找到候选。SAC 已展示前者与 CXL KV pool 配合，RetrievalAttention 展示后者用于 attention token selection；把后者放进 CXL 则要额外解决图遍历的远端指针依赖。
 
@@ -44,6 +55,18 @@ SAC 的结果说明 DSA 可以先在 GPU 选出 top-k，再让 GPU kernel 从 CX
 DeepSeek-V3.2 的 DSA 将主 attention 限定在少量 KV entries，但 lightning indexer 仍对历史位置打分。ECHO 进一步指出，native sparsity 并不消除完整 KV 生命周期和并发容量压力，于是采用 host offload、GPU cache 和 GPU graph 内 cache manager。SAC 则将 DSA top-k payload 按需放在 CXL pool；但它不使用 ANNS。
 
 RetroInfer 则把 index 与 buffer manager 联合优化：centroids/metadata 驻 GPU，KV blocks 驻 CPU 并聚类访问。这给 CXL 扩展提供可讨论的布局基线，但该论文使用 CPU DRAM + PCIe 测量，没有 CXL 结果。
+
+### 本轮纳入的最强相邻系统收窄了 proposal 的主张
+
+- [HiSparse](../sources/hisparse.md) 已实现 exact、indexer-agnostic 的 sparse selection resolution、固定大小 GPU cache 和按层预取。proposal 不能把“精确搬回被选 KV、bounded HBM residency、跨层 prefetch”单独作为创新。
+- [Fluxion](../sources/fluxion.md) 已把 sparse budget、head/granularity 选择和 CPU/GPU attention 调度协同起来；[ScoutAttention](../sources/scoutattention.md) 也有 CPU/GPU co-attention 与异步 recall。异构 attention 与跨设备重叠都已有先例。
+- [IceCache](../sources/icecache.md) 已覆盖动态语义页、GQA union 和 bulk backload；[SPIN](../sources/spin.md) 覆盖统一稀疏分页、动态 HBM cache 和 working-set metadata；[CompactAttention](../sources/compactattention.md) 在 chunked prefill 中覆盖 mask-to-page-table 和 GQA/subgroup union。
+- [CXL-Vector](../sources/cxl-vector.md) 已覆盖 DRAM 压缩图导航并从 memory-only CXL 拉回原精度候选重排；[CXL-ANNS](../sources/cxl-anns.md) 与 [COSMOS](../sources/cosmos-cxl-anns.md) 分别覆盖 CXL graph search 和 CXL endpoint 内计算。将 RoarGraph/OOD attention queries 用于 KV 与它们组合，仍需要单独实测。
+- [TRACE](../sources/trace-cxl.md) 与 [PNM-KV](../sources/pnm-kv.md) 表明 CXL 设备内部的数据表示、压缩、精度层和 near-memory compute 也可能改变瓶颈；它们的硬件假设要与 commodity memory-only CXL 路径分开。
+
+据此，当前 proposal 更可证伪、也更窄的核心问题是：**固定 selector、选集、逐 head mask 和精度后，系统能否按真实 KV group 的物理 footprint、HBM residency、GQA overlap、span 和链路 credits，把冷数据在有界 GPU packet 与 CPU partial attention 之间分流，并在计入 planner、搬运、同步和 merge 后，胜过最强 whole-group 路径？** 这是待验证的研究假设，不是文献已经证明的空白。需要至少和 HiSparse 式精确 GPU fetch/cache、Fluxion/IceCache 式 CPU/GPU whole-group 或 bulk route、SAC 的 CXL 按需读取、以及 CXL-Vector 机制下的候选路径在相同 selection 和质量条件下比较。
+
+selector/质量轴也应单独控制： [Louver](../sources/louver.md) 的零 false negative 是阈值相对保证，不等同固定 top-k 或输出误差界；[Verified vAttention](../sources/vattention-verified.md) 给 sparse attention 近似误差保证；[MiniMax Sparse Attention](../sources/minimax-sparse-attention.md) 使用 per-GQA-group 训练 selector；[Self-Indexing KVCache](../sources/self-indexing-kvcache.md) 与 [SALS](../sources/sals.md) 则探索压缩表示兼作检索空间。它们帮助固定并说明 selection 契约，但不代替同一选集下的执行成本实验。
 
 ## 一个可检验的组合架构（推论）
 
