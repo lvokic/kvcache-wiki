@@ -31,3 +31,9 @@ Append new entries below. Use the format `## [YYYY-MM-DD] kind | description`.
 - Added and ingested [Beluga](sources/beluga.md) (SIGMOD 2026) and [SAC](sources/sac.md) (arXiv v1, 2026) into `raw/papers/`.
 - Updated the [sparse attention/CXL/ANNS synthesis](topics/sparse-attention-cxl-anns.md), overview, index, and supplemental-paper list to distinguish three pairwise paths: RetrievalAttention (sparse attention + ANNS), SAC (sparse attention + CXL), and CXL-ANNS (CXL + ANNS).
 - Recorded the evidence boundary: SAC uses DeepSeek's top-k indexer rather than ANNS; Beluga's CXL/KV serving paper does not integrate ANNS, though it discusses vector/graph databases as a possible CXL use.
+
+## [2026-09-29] organize | Consolidate ingested papers
+
+- Moved the seven already-ingested root-level PDFs into `raw/papers/`, preserving their filenames and contents.
+- Updated source-note links and completed [`raw/papers/README.md`](../raw/papers/README.md) as the catalog of all 18 ingested papers.
+- Replaced a stale Quest cross-reference in the InfiniGen source note with the existing Quest note.

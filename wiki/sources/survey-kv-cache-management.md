@@ -2,7 +2,7 @@
 
 **作者：** Haoyang Li, Yiming Li, Anxin Tian, Tianhao Tang, Zhanchao Xu, Xuejia Chen, Nicole Hu, Wei Dong, Qing Li, Lei Chen  
 **发表：** TMLR 2025；本地文件为 arXiv v3（2025-07-30）  
-**原始文件：** [raw/survey_on_kv.pdf](../../raw/survey_on_kv.pdf)  
+**原始文件：** [raw/papers/survey_on_kv.pdf](../../raw/papers/survey_on_kv.pdf)  
 **正式记录：** [arXiv:2412.19442](https://arxiv.org/abs/2412.19442) · [TMLR review](https://openreview.net/pdf?id=z3JZzu9EA3)
 
 ## 摘要
@@ -25,4 +25,3 @@
 
 - 与 [KV cache 管理与 serving 系统](../topics/kv-cache-management.md) 的三层 taxonomy 对应。
 - 和 [From Tensor Buffer to Distributed Memory Hierarchy](distributed-kv-hierarchy-survey.md) 互补：后者更细看系统的 locality、lifetime、ownership 和 substrate。
-

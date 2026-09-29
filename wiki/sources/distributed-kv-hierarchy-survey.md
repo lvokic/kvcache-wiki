@@ -2,7 +2,7 @@
 
 **作者：** Jie Li, Tongyang Wang, Yong Chen  
 **版本：** arXiv v1，2026-06-30；截至本次整理尚未标注同行评审发表 venue  
-**原始文件：** [raw/from_tensor_buffer.pdf](../../raw/from_tensor_buffer.pdf)  
+**原始文件：** [raw/papers/from_tensor_buffer.pdf](../../raw/papers/from_tensor_buffer.pdf)  
 **正式记录：** [arXiv:2607.02574](https://arxiv.org/abs/2607.02574) · [HTML 全文](https://arxiv.org/html/2607.02574)
 
 ## 摘要
@@ -30,4 +30,3 @@
 
 - 本 wiki 的主综合页：[KV cache 管理与 serving 系统](../topics/kv-cache-management.md)。
 - 对照 [DistServe](distserve.md)（请求级 P/D handoff）、[Mooncake](mooncake.md)（全局复用与多层存储）和 [CacheGen](cachegen.md)（传输时压缩）。
-

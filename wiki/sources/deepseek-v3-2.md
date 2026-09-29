@@ -2,7 +2,7 @@
 
 **作者：** DeepSeek-AI 及合作者  
 **版本：** arXiv:2512.02556 v1，2025-12-02  
-**原始文件：** [raw/deepseek_v3.2.pdf](../../raw/deepseek_v3.2.pdf)  
+**原始文件：** [raw/papers/deepseek_v3.2.pdf](../../raw/papers/deepseek_v3.2.pdf)  
 **正式记录：** [arXiv 论文与全文](https://arxiv.org/abs/2512.02556)
 
 ## 摘要

@@ -2,7 +2,7 @@
 
 **作者：** Yaoqi Chen 等  
 **发表：** PVLDB 19(5)，2026；DOI 10.14778/3796195.3796212  
-**本地版本：** [raw/retroinfer.pdf](../../raw/retroinfer.pdf)，arXiv:2505.02922 v3  
+**本地版本：** [raw/papers/retroinfer.pdf](../../raw/papers/retroinfer.pdf)，arXiv:2505.02922 v3  
 **正式记录：** [PVLDB DOI](https://doi.org/10.14778/3796195.3796212) · [arXiv 论文](https://arxiv.org/abs/2505.02922)
 
 ## 摘要

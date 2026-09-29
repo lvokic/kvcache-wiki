@@ -4,7 +4,8 @@ This repository is a persistent knowledge base maintained with an LLM. Its curre
 
 ## Structure
 
-- `raw/` contains owner-curated source files. Treat these as immutable: read them, but never edit, rename, or delete them.
+- `raw/` contains source files. Never alter or delete source contents. After a paper has been ingested, its PDF belongs in `raw/papers/`; moving it there is allowed, but preserve its bytes and filename and update every reference to its path.
+- `raw/papers/README.md` is the complete catalog of ingested paper PDFs. Append a linked entry for each paper after ingest is complete.
 - `wiki/index.md` is the content-oriented catalog. Keep it organized by page type and give each page a short description.
 - `wiki/log.md` is the chronological, append-only record of ingests, substantial saved analyses, and lint passes.
 - `wiki/sources/` contains one concise note per ingested source.
@@ -28,12 +29,13 @@ Create only the page types that are useful for the chosen subject. Link pages wi
 
 When asked to ingest a source:
 
-1. Read the source without modifying it. If the material cannot be read or its identity is unclear, report that before making claims about it.
+1. Read the source without modifying its contents. If the material cannot be read or its identity is unclear, report that before making claims about it.
 2. Create a source note with bibliographic details when available, a concise summary, key claims, limitations, and links to relevant pages.
 3. Find and update affected topic, entity, and overview pages. Add evidence and cross-links; flag contradictions or changes in confidence.
 4. Update `wiki/index.md` for every page created or substantially changed.
 5. Append one dated ingest entry to `wiki/log.md` with the source and pages touched.
-6. Report the main takeaways, files changed, and unresolved questions.
+6. After ingest is complete, move the paper PDF into `raw/papers/` if it is elsewhere. Preserve its bytes and filename, update links affected by the move, and append a linked entry to `raw/papers/README.md`.
+7. Report the main takeaways, files changed, and unresolved questions.
 
 ### Answer a question
 

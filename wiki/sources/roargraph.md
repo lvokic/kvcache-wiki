@@ -2,7 +2,7 @@
 
 **作者：** Meng Chen, Kai Zhang, Zhenying He, Yinan Jing, X. Sean Wang  
 **发表：** PVLDB 17(11)，2024，2735–2749；DOI 10.14778/3681954.3681959  
-**原始文件：** [raw/roargraph.pdf](../../raw/roargraph.pdf)  
+**原始文件：** [raw/papers/roargraph.pdf](../../raw/papers/roargraph.pdf)  
 **正式论文：** [PVLDB 论文 PDF](https://www.vldb.org/pvldb/vol17/p2735-chen.pdf)
 
 ## 摘要

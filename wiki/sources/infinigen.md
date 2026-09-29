@@ -18,5 +18,4 @@ InfiniGen 面向 host-memory offload 的长文本生成系统。它用当前层�
 
 - 设计依赖 offloading 架构和预测阶段额外工作；它不是一个对所有 serving 系统透明的通用 cache manager。
 - 它与 [PagedAttention](pagedattention.md) 关注不同层次：PagedAttention 管理 GPU 物理 blocks；InfiniGen 决定哪些 host-resident KV 要预取、哪些低使用项可淘汰。
-- 与 [Quest](../../raw/quest.pdf) 等 query-aware 稀疏注意力方向相邻，但本轮尚未为 `quest.pdf` 建立 source note。
-
+- 与 [Quest](quest.md) 等 query-aware 稀疏注意力方向相邻。

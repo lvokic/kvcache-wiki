@@ -2,7 +2,7 @@
 
 **作者：** Di Liu 等  
 **发表：** NeurIPS 2025，主会  
-**原始文件：** [raw/retrievalatten.pdf](../../raw/retrievalatten.pdf)  
+**原始文件：** [raw/papers/retrievalatten.pdf](../../raw/papers/retrievalatten.pdf)  
 **正式论文：** [NeurIPS 论文页与 PDF](https://proceedings.neurips.cc/paper_files/paper/2025/hash/4e36d4049fb0fea195a8267c8dcd0824-Abstract-Conference.html)
 
 ## 摘要

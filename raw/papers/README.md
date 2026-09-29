@@ -1,6 +1,6 @@
-# Supplemental papers
+# Ingested papers
 
-This directory holds open-access papers collected to extend the initial KV-cache reading set. The source notes in `../../wiki/sources/` record the canonical publication, version, and download URL for each PDF. Treat downloaded PDFs as immutable source material.
+This is the complete catalog of ingested paper PDFs in this repository. The source notes in `../../wiki/sources/` record the canonical publication, version, and download URL for each PDF. Keep PDF contents unchanged. After each paper is ingested and placed in this directory, append a linked entry here.
 
 ## Papers
 
@@ -15,3 +15,10 @@ This directory holds open-access papers collected to extend the initial KV-cache
 - [ECHO — OSDI 2026](echo-osdi26.pdf)
 - [Beluga — SIGMOD 2026](beluga-sigmod26.pdf)
 - [SAC — arXiv preprint 2026](sac-cxl-sparse-arxiv26.pdf)
+- [A Survey on LLM Acceleration Based on KV Cache Management — TMLR 2025](survey_on_kv.pdf)
+- [From Tensor Buffer to Distributed Memory Hierarchy — arXiv 2026](from_tensor_buffer.pdf)
+- [DeepSeek-V3.2 — arXiv 2025](deepseek_v3.2.pdf)
+- [Quest — ICML 2024](quest.pdf)
+- [RetrievalAttention — NeurIPS 2025](retrievalatten.pdf)
+- [RetroInfer — PVLDB 2026](retroinfer.pdf)
+- [RoarGraph — PVLDB 2024](roargraph.pdf)

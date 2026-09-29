@@ -2,7 +2,7 @@
 
 **作者：** Jiaming Tang, Yilong Zhao, Kan Zhu, Guangxuan Xiao, Baris Kasikci, Song Han  
 **发表：** ICML 2024，PMLR 235，47901–47911  
-**原始文件：** [raw/quest.pdf](../../raw/quest.pdf)  
+**原始文件：** [raw/papers/quest.pdf](../../raw/papers/quest.pdf)  
 **正式论文：** [PMLR 论文页与 PDF](https://proceedings.mlr.press/v235/tang24l.html)
 
 ## 摘要
