@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KV Cache：从 Lecture 10 到 Kernel Efficiency</title>
+  <style>
+    :root {
+      --bg: #f3f1e9;
+      --paper: #fffdf7;
+      --ink: #18302f;
+      --muted: #5d6c68;
+      --line: #d6ded4;
+      --green: #17624e;
+      --lime: #d9f19a;
+      --soft: #e8efe8;
+      --amber: #8a5b27;
+      --warn: #f5eadb;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 22px; }
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.8 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    }
+    a { color: var(--green); text-underline-offset: 4px; }
+    a:hover { color: #082f25; }
+    a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible {
+      outline: 3px solid #b97c28;
+      outline-offset: 4px;
+    }
+    header {
+      padding: 70px max(6vw, 24px) 56px;
+      background: var(--ink);
+      color: #fffef9;
+    }
+    header .inner { max-width: 1140px; margin: auto; }
+    .eyebrow {
+      font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: 2px;
+      color: #b9cec3;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 20px 0;
+      font-size: clamp(34px, 5vw, 62px);
+      line-height: 1.18;
+      letter-spacing: -2px;
+    }
+    h1 span { color: var(--lime); }
+    .lead { max-width: 820px; color: #d4dfd8; font-size: 18px; }
+    .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
+    .meta span { padding: 5px 12px; border: 1px solid #5b7168; border-radius: 999px; font-size: 12px; }
+    .layout {
+      max-width: 1280px;
+      margin: auto;
+      padding: 40px 28px;
+      display: grid;
+      grid-template-columns: 210px minmax(0, 1fr);
+      gap: 42px;
+    }
+    nav { min-width: 0; position: sticky; top: 24px; align-self: start; font-size: 13px; }
+    nav a {
+      display: block;
+      padding: 9px 12px;
+      border-left: 2px solid var(--line);
+      color: var(--muted);
+      text-decoration: none;
+    }
+    nav a:hover { background: var(--soft); border-color: var(--green); }
+    nav small { display: block; padding: 16px 12px; color: var(--muted); }
+    main { min-width: 0; }
+    section { margin: 0 0 52px; }
+    h2 { margin: 8px 0 20px; font-size: 29px; line-height: 1.4; letter-spacing: -.6px; }
+    h3 { margin: 0 0 9px; font-size: 18px; line-height: 1.5; }
+    p { margin: 10px 0 15px; }
+    ul, ol { padding-left: 23px; }
+    .kicker {
+      color: var(--green);
+      font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: 1.5px;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .card, .paper {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--paper);
+    }
+    .card p:last-child, .paper p:last-child { margin-bottom: 0; }
+    .callout {
+      margin: 20px 0;
+      padding: 21px 24px;
+      border-left: 4px solid var(--green);
+      border-radius: 0 11px 11px 0;
+      background: var(--soft);
+    }
+    .callout.warn { background: var(--warn); border-color: var(--amber); }
+    .small { color: var(--muted); font-size: 13px; }
+    .pill {
+      display: inline-block;
+      margin-right: 6px;
+      padding: 2px 8px;
+      border-radius: 5px;
+      background: var(--soft);
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .pill.hyp { background: var(--warn); color: var(--amber); }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin: 20px 0;
+    }
+    .flow div {
+      padding: 16px 12px;
+      border: 1px solid var(--line);
+      border-top: 3px solid var(--green);
+      border-radius: 8px;
+      background: var(--paper);
+      font-size: 13px;
+    }
+    .flow b { display: block; margin-bottom: 7px; }
+    .flow span { color: var(--muted); }
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: #e4ebe3;
+      font: .9em ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    pre {
+      padding: 21px;
+      border-radius: 12px;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+      background: #1d3332;
+      color: #e4ecdf;
+      font: 13px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+    table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 13px 15px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: var(--soft); font-size: 12px; }
+    tr:last-child td { border-bottom: 0; }
+    details { margin: 12px 0; padding: 15px 20px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+    summary { cursor: pointer; font-weight: 700; }
+    .controls { display: flex; flex-wrap: wrap; gap: 15px; }
+    .controls label { min-width: 155px; flex: 1; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+    input, select { padding: 10px; border: 1px solid #b7c5bb; border-radius: 6px; background: white; color: var(--ink); font: inherit; }
+    .results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; }
+    .results div { padding: 15px; border-radius: 8px; background: var(--soft); }
+    .results strong { display: block; font: 22px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .results small { color: var(--muted); }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 9px; margin: 18px 0; }
+    .toolbar input { min-width: 230px; flex: 1; }
+    button { padding: 8px 13px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); color: var(--ink); cursor: pointer; font: 13px inherit; }
+    button.active { border-color: var(--green); background: var(--green); color: white; }
+    .papers { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .paper h3 { font-size: 16px; }
+    .paper p { margin: 8px 0; font-size: 13px; }
+    .paper .tag { margin-bottom: 7px; color: var(--muted); font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .paper[hidden] { display: none; }
+    footer { padding: 26px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; gap: 20px; }
+      nav { width: 100%; max-width: 100%; position: static; display: flex; gap: 3px; overflow-x: auto; }
+      nav a { border-left: 0; border-bottom: 2px solid var(--line); white-space: nowrap; }
+      nav small { display: none; }
+      .flow { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 600px) {
+      header { padding: 44px 21px; }
+      h1 { overflow-wrap: anywhere; letter-spacing: -1px; }
+      h2 { overflow-wrap: anywhere; font-size: 24px; }
+      .layout { padding: 25px 18px; }
+      .grid, .papers, .results, .flow { grid-template-columns: 1fr; }
+      .card, .paper { padding: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media print {
+      body { background: white; font-size: 11pt; }
+      header { padding: 20px 0; background: white; color: black; }
+      header .lead, header .eyebrow, h1 span { color: #333; }
+      .layout { display: block; max-width: none; padding: 0; }
+      nav, .toolbar, button, .controls { display: none !important; }
+      .papers { display: block; }
+      .paper { margin: 8px 0; }
+      .paper[hidden] { display: block; }
+      .card, .paper, pre { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="inner">
+      <div class="eyebrow">Research notebook · 22 September 2026</div>
+      <h1>KV Cache<br><span>从 Lecture 10 到 Kernel Efficiency</span></h1>
+      <p class="lead">把我们关于 KV cache 的讨论收敛到一条可测量的执行路径：检索、选页、搬运、attention 与增量更新。核心转向 kernel 与 efficiency；长上下文和 multi-turn 是工作负载，CXL 是需要实测的内存层次。</p>
+      <div class="meta"><span>Kernel × Index × Data Layout</span><span>质量是约束，效率是目标</span><span>单文件 · 离线可读</span></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav aria-label="章节导航">
+      <a href="#scope">01 研究定位</a>
+      <a href="#lecture">02 Lecture 10</a>
+      <a href="#path">03 执行路径</a>
+      <a href="#page">04 Page 粒度</a>
+      <a href="#ideas">05 关键观点</a>
+      <a href="#prior">06 已有工作</a>
+      <a href="#systems">07 OSDI / SOSP</a>
+      <a href="#novelty">08 Novelty 方法</a>
+      <a href="#prototype">09 原型路线</a>
+      <a href="#papers">10 论文索引</a>
+      <small>未确认的创新均标记为“待验证”。</small>
+    </nav>
+
+    <main>
+      <section id="scope">
+        <div class="kicker">01 / RESEARCH FOCUS</div>
+        <h2>研究目标已经从生命周期管理转向执行效率</h2>
+        <div class="callout"><strong>在给定模型质量与内存预算下，降低每个 decode step 的检索、数据访问和 attention 执行成本，同时让持续追加 KV 的更新开销可控。</strong></div>
+        <div class="grid">
+          <article class="card">
+            <h3>现在的主线</h3>
+            <p>CPU 上的检索与批量更新；token/page 索引与物理布局；GPU 上的分页或稀疏 attention kernel；CPU–GPU 传输和计算重叠。最终用 TPOT、吞吐、尾延迟、读取字节数和更新成本判断收益。</p>
+          </article>
+          <article class="card">
+            <h3>生命周期只保留为约束</h3>
+            <p>prefix sharing、引用计数、会话恢复和分支隔离仍影响正确性，但不再作为核心贡献。只有测量表明它们阻碍检索、搬运或 kernel 执行时，才纳入设计。</p>
+          </article>
+        </div>
+        <p class="small"><span class="pill hyp">研究状态</span>目前没有确认的 novelty。“graph index + page + CXL”是设计组合，不能单独构成贡献。</p>
+      </section>
+
+      <section id="lecture">
+        <div class="kicker">02 / START WITH INFERENCE</div>
+        <h2>从 CS336 Lecture 10 进入 KV cache 实现</h2>
+        <p><a href="https://github.com/stanford-cs336/spring2025-lectures/blob/main/lecture_10.py" target="_blank" rel="noopener noreferrer">CS336 Spring 2025 · Lecture 10: Inference</a> 是起点。先理解 prefill/decode、arithmetic intensity、KV cache、continuous batching 和 PagedAttention。Lecture 8 的 DDP 只需保留 all-reduce、通信与计算重叠等概念；scaling laws 可以暂时跳过。</p>
+        <div class="grid">
+          <article class="card">
+            <h3>为什么 decode 是主战场</h3>
+            <p>Lecture 10 的核心推导是：prefill 有较大的序列并行度，更容易进入 compute-bound；decode 每步只有少量 query，却需要读取历史 KV，attention 常受内存带宽限制。</p>
+          </article>
+          <article class="card">
+            <h3>FlashAttention 与 sparse page 的关系</h3>
+            <p>FlashAttention 优化完整 attention 的 IO。Top-k page 改变参与计算的历史集合。选中页内部可以精确计算，但对完整历史通常仍是近似。</p>
+          </article>
+        </div>
+        <p class="small">推荐顺序：Lecture 10 → PagedAttention/vLLM → FlashAttention 的 online softmax → RetrievalAttention / MoBA / IceCache → 具体 kernel 与系统瓶颈。</p>
+      </section>
+
+      <section id="path">
+        <div class="kicker">03 / CRITICAL PATH</div>
+        <h2>把“索引更快”拆成真实执行链</h2>
+        <div class="flow">
+          <div><b>1. 产生 q</b><span>GPU projection；按层、query head 产生查询。</span></div>
+          <div><b>2. 检索选页</b><span>CPU 扫描或图搜索；映射、去重与预算选择。</span></div>
+          <div><b>3. 加载 KV</b><span>DRAM/CXL 读取；gather、DMA 与 staging。</span></div>
+          <div><b>4. Attention</b><span>GPU 读取选中页，QK、softmax、PV 与合并。</span></div>
+          <div><b>5. 更新</b><span>追加新 KV；更新摘要、索引和映射。</span></div>
+        </div>
+        <div class="callout"><strong>端到端速度由关键路径决定。</strong>必须分别记录各阶段耗时、CPU 排队、GPU 等待和实际重叠比例；不能默认阶段完全串行，也不能默认它们完全重叠。</div>
+        <div class="grid">
+          <article class="card">
+            <h3>CPU / C++ 候选热点</h3>
+            <ul>
+              <li>批量 inner product、图遍历和候选扩展。</li>
+              <li>token IDs 到 page IDs 的映射、去重与预算截断。</li>
+              <li>插入缓冲、centroid 更新与邻接维护。</li>
+              <li>NUMA/CXL 下索引节点和边的局部性。</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3>GPU / CUDA 或 Triton 候选热点</h3>
+            <ul>
+              <li>非连续页读取、gather 和分页 attention。</li>
+              <li>变长候选集合与 GQA 下的重复读取。</li>
+              <li>局部/远端 partial outputs 的稳定归一化合并。</li>
+              <li>launch、同步和小任务调度开销。</li>
+            </ul>
+          </article>
+        </div>
+        <p><span class="pill hyp">待验证</span>GPU 计算近期 KV 时，CPU 可能搜索旧 KV；多请求也提供流水线机会。但同一层的搜索要先拿到 q。跨层预取通常依赖预测，必须统计误判与修正成本。</p>
+        <p><strong>不要预设“候选放回 GPU 一定更快”。</strong>RetrievalAttention 在 CPU 上直接计算检索部分的 partial attention，只返回小结果，从而避免搬运 K/V。它应当成为 GPU block attention 路径的直接对照。</p>
+      </section>
+
+      <section id="page">
+        <div class="kicker">04 / PAGE GRANULARITY LAB</div>
+        <h2>Page 是分配单位，也是检索和读取成本单位</h2>
+        <p>vLLM 当前配置代码的默认 block size 是 16 tokens；具体模型和 backend 可以采用其他大小。单层、单个 KV head 的一个 B-token page 包含 B 个 K vectors 与 B 个 V vectors。它不是操作系统的 4 KiB 页面。<a href="https://github.com/vllm-project/vllm/blob/main/vllm/config/cache.py" target="_blank" rel="noopener noreferrer">查看配置源码</a></p>
+        <article class="card">
+          <h3>交互计算：索引规模与加载预算</h3>
+          <p class="small">假设 head dimension = 128、K/V 都是 BF16、共有 8 个 KV heads。这里只计算有效 KV 数据，不含索引、映射、量化元数据或 tensor parallel 分片。</p>
+          <div class="controls">
+            <label>历史 tokens
+              <select id="context">
+                <option value="32768">32K · 32,768</option>
+                <option value="131072" selected>128K · 131,072</option>
+                <option value="1048576">1M · 1,048,576</option>
+              </select>
+            </label>
+            <label>每页 tokens
+              <select id="page-size"><option>16</option><option>32</option><option>64</option><option>128</option><option>256</option></select>
+            </label>
+            <label>选中 pages
+              <input id="selected-pages" type="number" min="1" value="64">
+            </label>
+          </div>
+          <div class="results" aria-live="polite">
+            <div><small>历史页数</small><strong id="page-count">8,192</strong></div>
+            <div><small>每页 K+V / 单层单 head</small><strong id="page-bytes">8 KiB</strong></div>
+            <div><small>选中 token 数</small><strong id="chosen-tokens">1,024</strong></div>
+            <div><small>读取 / 单层单 head</small><strong id="head-bytes">512 KiB</strong></div>
+            <div><small>读取 / 单层 8 heads</small><strong id="layer-bytes">4 MiB</strong></div>
+            <div><small>历史覆盖比例</small><strong id="fraction">0.78%</strong></div>
+          </div>
+        </article>
+        <p>小页减少读取放大，却增加索引对象、去重和调度成本；大页让索引更小、搬运更连续，却可能为少量重要 token 加载大量无关 KV。比较不同 page size 时，应固定读取字节/token 预算或质量目标，不能固定 Top-k page 数就宣称公平。</p>
+        <pre>token graph → 高分 token IDs → page 映射与去重 → 加载 pages
+page graph  → page 代表向量搜索 → page IDs → 加载 pages
+层次索引    → 粗粒度 group → 细粒度 pages → attention
+
+单层单 head 每页字节数 = 2 × page_tokens × head_dim × bytes_per_element
+完整 KV 字节数 ≈ 2 × layers × KV_heads × head_dim × tokens × bytes</pre>
+        <p class="small">索引粒度、分配粒度、传输粒度和 GPU tile 大小可以不同。若每个 head 独立聚类，必须计入对应索引和映射成本。</p>
+      </section>
+
+      <section id="ideas">
+        <div class="kicker">05 / IDEAS WORTH KEEPING</div>
+        <h2>讨论中值得保留的观点，以及它们的边界</h2>
+        <details open>
+          <summary>“检索 token，返回 page”合理，但已有直接先例</summary>
+          <p>IceCache 的算法将检索到的关键 key IDs 映射为 page IDs，再批量加载 pages。差异必须落在搜索成本、页面组织、更新机制或 kernel 执行效率上；仅换成 graph index 不足以建立 novelty。</p>
+        </details>
+        <details>
+          <summary>“像 MoE 的 block routing”已有 MoBA</summary>
+          <p>MoBA 用 block 内 keys 的 mean pooling 与 q 打分，选择 Top-k blocks，再执行块内 attention。CPU 图检索、动态更新和 CXL 路径仍需另行验证，但 block routing 本身不能当成新概念。</p>
+        </details>
+        <details>
+          <summary>随机 scatter 后再建 centroid，需要先证明页具有区分度</summary>
+          <p>随机页随着样本增加可能都接近总体均值。页占用率高不等于 centroid 有用。如果阈值后重新聚类，必须计入 KV 重排、映射切换和旧页回收。</p>
+          <p><span class="pill hyp">待验证</span>延迟建索引应由“未来检索收益是否超过构建、重排和维护成本”触发，而不是只看 token 数。</p>
+        </details>
+        <details>
+          <summary>centroid 更新便宜，不代表图维护便宜</summary>
+          <p><code>new_mean = old_mean + (new_key - old_mean) / (count + 1)</code> 是 O(d) 更新，但代表点移动会使邻接边过时。需要比较实时修边、批量修边、冻结满页与 delta buffer。</p>
+        </details>
+        <details>
+          <summary>共同访问不一定等于 key 相近，但 co-activation 已有人研究</summary>
+          <p>RetrievalAttention 已用 query 分布改造图结构；Swarm 已测量共同激活、按共同激活聚类并在线适应。我们仍可验证固定容量页、相同质量预算下，历史轨迹对未来 multi-turn queries 是否能降低总访问字节。</p>
+        </details>
+        <details>
+          <summary>固定 GPU 工作集可以成立，总历史仍可能线性增长</summary>
+          <p>分页降低分配浪费；量化降低每 token 字节数；offloading 改变存放位置；稀疏检索减少每步读取。它们不能互相替代。当前索引方向优化的是活跃工作集和访问路径。</p>
+        </details>
+      </section>
+
+      <section id="prior">
+        <div class="kicker">06 / PRIOR ART BOUNDARY</div>
+        <h2>已有工作覆盖到了哪里？</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>工作</th><th>索引或选择粒度</th><th>与当前方向的关系</th></tr></thead>
+            <tbody>
+              <tr><td><a href="#p-retrieval">RetrievalAttention</a></td><td>key/token；attention-aware 图</td><td>CPU 搜索并算 partial attention，GPU 算常驻部分。</td></tr>
+              <tr><td><a href="#p-ice">IceCache</a></td><td>关键 keys → pages</td><td>动态 CPU 索引、语义页、增量插入和 CPU→GPU 加载。</td></tr>
+              <tr><td><a href="#p-infllm">InfLLM</a></td><td>代表 keys → memory units</td><td>block lookup；正文还提出极长上下文下的 CPU kNN 索引扩展。</td></tr>
+              <tr><td><a href="#p-moba">MoBA</a></td><td>mean-pooled block → blocks</td><td>MoE 风格路由、块内 attention 与 online-softmax 合并。</td></tr>
+              <tr><td><a href="#p-cluster">ClusterKV</a> / <a href="#p-louis">LouisKV</a></td><td>centroids → clusters / segments</td><td>已涉及成组 KV 检索、生成期组织和 kernel 优化。</td></tr>
+              <tr><td><a href="#p-scout">ScoutAttention</a></td><td>block digest → blocks</td><td>GPU 选择，CPU/GPU 协同，下一层预测预计算。</td></tr>
+              <tr><td><a href="#p-swarm">Swarm</a></td><td>co-activation → clusters</td><td>DRAM 索引、多 SSD 放置、并行读取与在线适应。</td></tr>
+              <tr><td><a href="#p-echo">ECHO</a></td><td>主要实验为 token 选择</td><td>GPU indexer 与 recall 流水化；不是 CPU ANN page index。</td></tr>
+              <tr><td><a href="#p-sac">SAC</a></td><td>sparse model 的 Top-k KV</td><td>CXL 分离式 KV 获取已经存在，必须更具体地区分。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="small">依据论文算法和系统描述整理，非逐行代码审计。不同工作的模型、预算、硬件和质量指标不能直接横向比较。</p>
+        <div class="callout warn"><strong>纠错：</strong>早先讨论低估了 IceCache 对“token IDs → page IDs + 动态更新”的覆盖，也遗漏了 Swarm 对共同访问聚类的验证。这里采用修正后的边界，不把这些已有概念包装成新颖性。</div>
+      </section>
+
+      <section id="systems">
+        <div class="kicker">07 / SYSTEMS PAPERS THAT SHAPE THE PROJECT</div>
+        <h2>OSDI / SOSP：不只看方案，也看如何把效率问题做成系统论文</h2>
+        <p>这些论文分成两层：第一层直接定义 KV cache、搬运和 kernel 的基线；第二层帮助我们学习如何隔离瓶颈、设计流水线并证明端到端收益。会议标签本身不是选择理由。</p>
+        <div class="grid">
+          <article class="card">
+            <span class="pill">最接近当前核心</span>
+            <h3>Page、选择、搬运与 kernel</h3>
+            <p><a href="https://doi.org/10.1145/3600006.3613165" target="_blank" rel="noopener noreferrer">PagedAttention（SOSP’23）</a>定义逻辑块到物理块的基础；<a href="https://www.usenix.org/conference/osdi24/presentation/lee" target="_blank" rel="noopener noreferrer">InfiniGen（OSDI’24）</a>展示预测选择和预取；<a href="https://www.usenix.org/conference/osdi26/presentation/liu-guangda" target="_blank" rel="noopener noreferrer">ECHO（OSDI’26）</a>把 indexer、recall 与 fused kernel 流水化。</p>
+          </article>
+          <article class="card">
+            <span class="pill">2026 前沿边界</span>
+            <h3>数据布局和异构内存已成为主问题</h3>
+            <p><a href="https://www.usenix.org/conference/osdi26/presentation/xie-zhiqiang" target="_blank" rel="noopener noreferrer">Strata（OSDI’26）</a>指出碎片化布局会制造小 I/O；<a href="https://www.usenix.org/conference/osdi26/presentation/luo" target="_blank" rel="noopener noreferrer">DirectKV（OSDI’26）</a>直接访问 CPU-resident KV，并融合 KV generation 与 attention。我们的设计必须优于“更好的传输与 kernel”这一强基线。</p>
+          </article>
+          <article class="card">
+            <span class="pill">端到端评测方法</span>
+            <h3>局部优化必须穿过 serving 调度</h3>
+            <p><a href="https://www.usenix.org/conference/osdi24/presentation/agrawal" target="_blank" rel="noopener noreferrer">Sarathi-Serve（OSDI’24）</a>用 chunked prefill 控制干扰；<a href="https://www.usenix.org/conference/osdi24/presentation/zhong-yinmin" target="_blank" rel="noopener noreferrer">DistServe（OSDI’24）</a>分离 prefill/decode 并以 TTFT、TPOT goodput 评估；<a href="https://www.usenix.org/conference/osdi24/presentation/sun-biao" target="_blank" rel="noopener noreferrer">Llumnix（OSDI’24）</a>展示如何隐藏 KV 状态迁移。</p>
+          </article>
+          <article class="card">
+            <span class="pill hyp">方法借鉴 · 非直接基线</span>
+            <h3>远端内存与动态 page 粒度</h3>
+            <p><a href="https://doi.org/10.1145/3600006.3613144" target="_blank" rel="noopener noreferrer">Ditto（SOSP’23）</a>研究分离式内存上的自适应缓存；<a href="https://doi.org/10.1145/3600006.3613167" target="_blank" rel="noopener noreferrer">MEMTIS（SOSP’23）</a>研究动态 page 分类和 page size。它们不回答稀疏 attention，但适合借鉴 metadata 成本、冷热识别和远端访问实验。</p>
+          </article>
+        </div>
+        <div class="callout"><strong>建议阅读顺序：</strong>PagedAttention → InfiniGen → ECHO → DirectKV / Strata；完成微基准后，再用 Sarathi-Serve、DistServe 和 Llumnix 检查局部收益能否转化为 TPOT、goodput 与尾延迟收益。</div>
+      </section>
+
+      <section id="novelty">
+        <div class="kicker">08 / EVIDENCE BEFORE NOVELTY</div>
+        <h2>从可复现的多余工作中寻找 novelty</h2>
+        <p>以下是用于筛选研究方向的实验假设，不是已经成立的贡献。</p>
+        <div class="grid">
+          <article class="card">
+            <span class="pill hyp">E1 · 搜索</span>
+            <h3>图索引何时才超过扫描？</h3>
+            <p>比较 page 代表扫描、token graph、page graph。覆盖上下文长度、batch size、page size 和并发。统计图节点/边读取，而不是只统计返回的 KV。</p>
+            <p class="small">否定信号：扫描在有效规模内始终更快，或检索不是端到端热点。</p>
+          </article>
+          <article class="card">
+            <span class="pill hyp">E2 · 更新</span>
+            <h3>检索节省是否被维护成本吃掉？</h3>
+            <p>比较逐 token 插入、批量更新、冻结页 + delta buffer。记录构建、插入、修边、重排和暂停时间，以及延迟更新造成的质量变化。</p>
+            <p class="small">否定信号：简单批量策略已足够，复杂维护没有净收益。</p>
+          </article>
+          <article class="card">
+            <span class="pill hyp">E3 · 布局</span>
+            <h3>高 token recall 是否仍要读取太多 pages？</h3>
+            <p>比较位置顺序、key 相似聚类和共同访问布局。固定页容量、复制预算和质量目标；用早期 query 构建，后续 query 测试。</p>
+            <p class="small">否定信号：IceCache 类布局已接近离线上界，或收益被复制/重排抵消。</p>
+          </article>
+          <article class="card">
+            <span class="pill hyp">E4 · Kernel</span>
+            <h3>候选减少为何没有等比加速？</h3>
+            <p>分解去重、gather、DMA、launch、attention 和合并。比较 CPU partial attention 与 GPU page attention，找出真实 break-even point。</p>
+            <p class="small">否定信号：现成 kernel 已接近硬件上限，没有明显额外工作可消除。</p>
+          </article>
+        </div>
+        <h3 style="margin-top:26px">最低限度的测量表</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>维度</th><th>必须记录</th><th>常见误判</th></tr></thead>
+            <tbody>
+              <tr><td>质量</td><td>attention 输出误差、覆盖质量、长任务最终准确率</td><td>只报告 ANN recall</td></tr>
+              <tr><td>检索</td><td>p50/p95/p99、访问节点/边、索引容量、CPU 时间</td><td>忽略 q 传输和 page 去重</td></tr>
+              <tr><td>更新</td><td>均摊/尾部插入、重排字节、建索引时间</td><td>只报告 steady state</td></tr>
+              <tr><td>数据路径</td><td>索引 + K + V 实际读取、传输和 GPU idle</td><td>只数返回 KV</td></tr>
+              <tr><td>端到端</td><td>TTFT、TPOT、吞吐、实际重叠率</td><td>kernel 更快等于 serving 更快</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout"><strong>有说服力的贡献链：</strong>可复现的多余工作 → 已有机制为何难以避免 → 针对性的索引/布局/kernel 改动 → 相同质量下的端到端收益。</div>
+      </section>
+
+      <section id="prototype">
+        <div class="kicker">09 / BUILD THE MEASURABLE PATH</div>
+        <h2>原型路线：先隔离热点，再接入 serving</h2>
+        <ol>
+          <li><strong>Python trace replay：</strong>采集 Q/K/V 和 oracle attention 轨迹，验证 page selection 的质量与理论读取量。</li>
+          <li><strong>C++ CPU microbenchmark：</strong>实现或接入 SIMD 扫描、图搜索、批量插入和 page 去重。</li>
+          <li><strong>GPU kernel microbenchmark：</strong>复用 paged attention；只针对 profiling 找到的 gather、变长处理或融合热点写 CUDA/Triton。</li>
+          <li><strong>端到端集成：</strong>Nano-vLLM 用于理解；正式原型优先接入 vLLM 或直接基线，观察调度和同步是否抵消收益。</li>
+          <li><strong>CXL 对照：</strong>比较索引全在 DRAM、全在 CXL、热导航结构在 DRAM 的混合放置；KV 数据单独作为实验变量。</li>
+        </ol>
+        <p><a href="https://github.com/GeeeekExplorer/nano-vllm" target="_blank" rel="noopener noreferrer">Nano-vLLM</a> · <a href="https://github.com/vllm-project/vllm" target="_blank" rel="noopener noreferrer">vLLM</a> · <a href="https://github.com/yuzhenmao/IceCache" target="_blank" rel="noopener noreferrer">IceCache</a> · <a href="https://github.com/flashinfer-ai/flashinfer" target="_blank" rel="noopener noreferrer">FlashInfer</a></p>
+        <p class="small">CXL 是独立实验变量。“索引放 CXL”和“KV 放 CXL”是不同问题；SAC 已覆盖 sparse KV 的 CXL 数据路径。</p>
+      </section>
+
+      <section id="papers">
+        <div class="kicker">10 / READING INDEX</div>
+        <h2>讨论过的论文与资料</h2>
+        <p>主线优先级：<strong>PagedAttention → MoBA / RetrievalAttention → IceCache → Swarm</strong>。再根据实测瓶颈进入 prefetch、kernel 或 CXL 文献。</p>
+        <div class="toolbar">
+          <input id="paper-search" type="search" placeholder="搜索标题、方法或关键字…" aria-label="搜索论文">
+          <button class="active" data-filter="all" aria-pressed="true">全部</button>
+          <button data-filter="foundation" aria-pressed="false">基础 / Kernel</button>
+          <button data-filter="retrieval" aria-pressed="false">检索 / 布局</button>
+          <button data-filter="system" aria-pressed="false">系统 / CXL</button>
+          <button data-filter="background" aria-pressed="false">压缩 / 背景</button>
+        </div>
+        <p id="paper-count" class="small" aria-live="polite"></p>
+        <div class="papers">
+          <article class="paper" id="p-paged" data-category="foundation"><div class="tag">FOUNDATION · SOSP 2023</div><h3><a href="https://arxiv.org/abs/2309.06180" target="_blank" rel="noopener noreferrer">PagedAttention / vLLM</a></h3><p>逻辑块、物理块、共享与动态分配。分页本身不做相关性检索。</p></article>
+          <article class="paper" id="p-fa" data-category="foundation"><div class="tag">KERNEL · NEURIPS 2022</div><h3><a href="https://arxiv.org/abs/2205.14135" target="_blank" rel="noopener noreferrer">FlashAttention</a></h3><p>IO-aware tiling 与 online softmax。理解多个 KV tiles 的 partial statistics 如何合并。</p></article>
+          <article class="paper" id="p-fa2" data-category="foundation"><div class="tag">KERNEL · 2023</div><h3><a href="https://arxiv.org/abs/2307.08691" target="_blank" rel="noopener noreferrer">FlashAttention-2</a></h3><p>改进 parallelism 与 work partitioning。训练/大 query 的收益不能直接套到 decode。</p></article>
+          <article class="paper" id="p-vattention" data-category="foundation"><div class="tag">MEMORY MANAGEMENT · 2024</div><h3><a href="https://arxiv.org/abs/2405.04437" target="_blank" rel="noopener noreferrer">vAttention</a></h3><p>利用 demand paging 支持动态 KV 分配，理解 allocator、虚拟连续布局与 kernel 的边界。</p></article>
+          <article class="paper" id="p-flashinfer" data-category="foundation"><div class="tag">SERVING KERNELS</div><h3><a href="https://flashinfer.ai/2024/02/02/introduce-flashinfer.html" target="_blank" rel="noopener noreferrer">FlashInfer</a></h3><p>分页 KV 和 serving attention 的实现入口。先复用，再根据 profiling 修改。</p></article>
+
+          <article class="paper" id="p-retrieval" data-category="retrieval"><div class="tag">DIRECT BASELINE · NEURIPS 2025</div><h3><a href="https://arxiv.org/abs/2409.10516" target="_blank" rel="noopener noreferrer">RetrievalAttention</a></h3><p>CPU attention-aware 图检索与 CPU/GPU partial attention；Q/K OOD 是关键观察。</p></article>
+          <article class="paper" id="p-ice" data-category="retrieval"><div class="tag">DIRECT BASELINE · ICLR 2026</div><h3><a href="https://arxiv.org/abs/2604.10539" target="_blank" rel="noopener noreferrer">IceCache</a></h3><p>动态 DCI 索引、语义页、token IDs 到 pages、CPU→GPU 批量加载。优先读 §4.2–4.5 和 Algorithm 3。</p></article>
+          <article class="paper" id="p-moba" data-category="retrieval"><div class="tag">BLOCK ROUTING · 2025</div><h3><a href="https://arxiv.org/abs/2502.13189" target="_blank" rel="noopener noreferrer">MoBA: Mixture of Block Attention</a></h3><p>mean-pooled keys → Top-k blocks → block attention；直接对应 MoE 类比。</p></article>
+          <article class="paper" id="p-infllm" data-category="retrieval"><div class="tag">BLOCK MEMORY · NEURIPS 2024</div><h3><a href="https://arxiv.org/abs/2402.04617" target="_blank" rel="noopener noreferrer">InfLLM</a></h3><p>用代表 tokens 检索 memory units；正文还提出把代表向量放到 CPU 建 kNN 索引。</p></article>
+          <article class="paper" id="p-quest" data-category="retrieval"><div class="tag">PAGE SELECTION · 2024</div><h3><a href="https://arxiv.org/abs/2406.10774" target="_blank" rel="noopener noreferrer">Quest</a></h3><p>以 page 内 keys 的逐维 min/max 估计相关性，是复杂图索引不能跳过的简单基线。</p></article>
+          <article class="paper" id="p-cluster" data-category="retrieval"><div class="tag">CLUSTERING · 2024</div><h3><a href="https://arxiv.org/abs/2412.03213" target="_blank" rel="noopener noreferrer">ClusterKV</a></h3><p>按 key 相似性聚类，以 centroid 选择成组 KV。</p></article>
+          <article class="paper" id="p-louis" data-category="retrieval"><div class="tag">RETRIEVAL / UPDATE · 2025</div><h3><a href="https://arxiv.org/abs/2510.11292" target="_blank" rel="noopener noreferrer">LouisKV</a></h3><p>输入 clusters、输出 temporal segments；利用 query 时间局部性，包含 Triton/CUDA 优化。</p></article>
+          <article class="paper" id="p-lychee" data-category="retrieval"><div class="tag">HIERARCHICAL INDEX · 2026</div><h3><a href="https://arxiv.org/abs/2603.08453" target="_blank" rel="noopener noreferrer">LycheeCluster</a></h3><p>结构感知 chunks、层次 KV 索引和 lazy update，覆盖了 block 代表之上的层次搜索。</p></article>
+          <article class="paper" id="p-swarm" data-category="retrieval"><div class="tag">CO-ACTIVATION / SSD · 2026</div><h3><a href="https://arxiv.org/abs/2603.17803" target="_blank" rel="noopener noreferrer">Swarm</a></h3><p>共同激活聚类、多 SSD 放置与在线适应。优先看 Figure 4–5、§5.1、§6.2。</p></article>
+
+          <article class="paper" id="p-infinigen" data-category="system"><div class="tag">PREFETCH · OSDI 2024</div><h3><a href="https://www.usenix.org/conference/osdi24/presentation/lee" target="_blank" rel="noopener noreferrer">InfiniGen</a></h3><p>利用预测选择并预取必要 KV，理解 pipeline 中 q 依赖和错误预测成本。</p></article>
+          <article class="paper" id="p-sarathi" data-category="system"><div class="tag">SCHEDULING · OSDI 2024</div><h3><a href="https://www.usenix.org/conference/osdi24/presentation/agrawal" target="_blank" rel="noopener noreferrer">Sarathi-Serve</a></h3><p>chunked prefill 与 stall-free scheduling；提醒我们在混合负载中测 kernel 改动造成的 prefill/decode 干扰。</p></article>
+          <article class="paper" id="p-distserve" data-category="system"><div class="tag">DISAGGREGATION · OSDI 2024</div><h3><a href="https://www.usenix.org/conference/osdi24/presentation/zhong-yinmin" target="_blank" rel="noopener noreferrer">DistServe</a></h3><p>分离 prefill 与 decode，围绕 TTFT、TPOT 和 per-GPU goodput 做资源配置与并行策略优化。</p></article>
+          <article class="paper" id="p-llumnix" data-category="system"><div class="tag">LIVE MIGRATION · OSDI 2024</div><h3><a href="https://www.usenix.org/conference/osdi24/presentation/sun-biao" target="_blank" rel="noopener noreferrer">Llumnix</a></h3><p>把 KV cache 复制与生成计算流水化，实现请求 live migration；适合学习状态搬运如何不阻塞 decode。</p></article>
+          <article class="paper" id="p-strata" data-category="system"><div class="tag">HIERARCHICAL CACHE · OSDI 2026</div><h3><a href="https://www.usenix.org/conference/osdi26/presentation/xie-zhiqiang" target="_blank" rel="noopener noreferrer">Strata</a></h3><p>跨 HBM、CPU 和 SSD 的 context cache；核心观察是碎片化 KV 布局和小传输会使系统 I/O-bound。</p></article>
+          <article class="paper" id="p-directkv" data-category="system"><div class="tag">ZERO-COPY / KERNEL · OSDI 2026</div><h3><a href="https://www.usenix.org/conference/osdi26/presentation/luo" target="_blank" rel="noopener noreferrer">DirectKV</a></h3><p>在 NVLink-C2C 平台让 GPU 直接读取 CPU-resident KV，并以融合和 warp-level pipeline 隐藏远端访问。</p></article>
+          <article class="paper" id="p-scout" data-category="system"><div class="tag">CPU–GPU PIPELINE · DAC 2026</div><h3><a href="https://arxiv.org/abs/2603.27138" target="_blank" rel="noopener noreferrer">ScoutAttention</a></h3><p>block-wise sparse attention 与 layer-ahead CPU 预计算；选择主要在 GPU。</p></article>
+          <article class="paper" id="p-echo" data-category="system"><div class="tag">SERVING / PREFETCH · OSDI 2026</div><h3><a href="https://www.usenix.org/conference/osdi26/presentation/liu-guangda" target="_blank" rel="noopener noreferrer">ECHO</a></h3><p>原生 sparse attention 模型的 KV offloading 与 lossless prefetching。</p></article>
+          <article class="paper" id="p-herald" data-category="system"><div class="tag">BLOCK DIFFUSION · 2026</div><h3><a href="https://arxiv.org/abs/2606.21633" target="_blank" rel="noopener noreferrer">HERALD</a></h3><p>CPU selection 与 GPU denoising 的流水线；面向 block diffusion LLM。</p></article>
+          <article class="paper" id="p-sac" data-category="system"><div class="tag">CXL / SPARSE ATTENTION · 2026</div><h3><a href="https://arxiv.org/abs/2606.19746" target="_blank" rel="noopener noreferrer">SAC</a></h3><p>CXL 分离式 sparse KV 系统；已有按需获取 Top-k KV 的 CXL 数据路径。</p></article>
+          <article class="paper" id="p-ditto" data-category="system"><div class="tag">DISAGGREGATED CACHE · SOSP 2023</div><h3><a href="https://doi.org/10.1145/3600006.3613144" target="_blank" rel="noopener noreferrer">Ditto</a></h3><p>分离式内存上的弹性、自适应缓存；不是 KV attention 基线，但适合借鉴远端 metadata 与策略开销。</p></article>
+          <article class="paper" id="p-memtis" data-category="system"><div class="tag">MEMORY TIERING · SOSP 2023</div><h3><a href="https://doi.org/10.1145/3600006.3613167" target="_blank" rel="noopener noreferrer">MEMTIS</a></h3><p>动态 page 分类和 page size 决策；用于思考固定 KV page 是否在不同层次都合理。</p></article>
+
+          <article class="paper" id="p-h2o" data-category="background"><div class="tag">EVICTION · NEURIPS 2023</div><h3><a href="https://arxiv.org/abs/2306.14048" target="_blank" rel="noopener noreferrer">H₂O</a></h3><p>Heavy-Hitter Oracle；用于区分永久淘汰与保留历史、按需检索。</p></article>
+          <article class="paper" id="p-stream" data-category="background"><div class="tag">BOUNDED CACHE · ICLR 2024</div><h3><a href="https://arxiv.org/abs/2309.17453" target="_blank" rel="noopener noreferrer">StreamingLLM</a></h3><p>attention sinks + recent window；固定缓存不等于保留任意历史访问能力。</p></article>
+          <article class="paper" id="p-kivi" data-category="background"><div class="tag">QUANTIZATION · ICML 2024</div><h3><a href="https://arxiv.org/abs/2402.02750" target="_blank" rel="noopener noreferrer">KIVI</a></h3><p>低比特 KV 量化，减少每 token 字节数；与分页和检索解决不同问题。</p></article>
+          <article class="paper" id="p-razor" data-category="background"><div class="tag">HEAD SPARSITY · 2024</div><h3><a href="https://arxiv.org/abs/2407.15891" target="_blank" rel="noopener noreferrer">RazorAttention</a></h3><p>区分 retrieval heads 与其他 heads，提醒我们不要为每个 head 维护同样昂贵的索引。</p></article>
+          <article class="paper" id="p-completion" data-category="background"><div class="tag">APPROXIMATION QUALITY · 2026</div><h3><a href="https://arxiv.org/abs/2604.05438" target="_blank" rel="noopener noreferrer">Top-K Retrieval with Fixed-Size Linear-Attention Completion</a></h3><p>补偿未检索区域的 softmax mass，用于理解 selection-only Top-k 的质量缺口。</p></article>
+          <article class="paper" id="p-survey1" data-category="background"><div class="tag">SURVEY · 2024/2025</div><h3><a href="https://arxiv.org/abs/2412.19442" target="_blank" rel="noopener noreferrer">A Survey on LLM Acceleration based on KV Cache Management</a></h3><p>对应本地 2412.19442v3；用作压缩、选择和系统优化的背景地图。</p></article>
+          <article class="paper" id="p-survey2" data-category="background"><div class="tag">SURVEY · 2026</div><h3><a href="https://arxiv.org/abs/2607.02574" target="_blank" rel="noopener noreferrer">From Tensor Buffer to Distributed Memory Hierarchy</a></h3><p>从 locality、lifetime、ownership、substrate 组织 KV 管理；当前项目只抽取效率执行链。</p></article>
+          <article class="paper" id="p-memos" data-category="background"><div class="tag">EARLIER CONTEXT · OPTIONAL</div><h3><a href="https://arxiv.org/abs/2507.03724" target="_blank" rel="noopener noreferrer">MemOS: A Memory OS for AI System</a></h3><p>此前 agent memory 与 activation/KV memory 讨论入口，不是当前 kernel 方向的直接基线。</p></article>
+        </div>
+        <p id="empty-state" hidden>没有匹配的论文，请更换关键词或分类。</p>
+      </section>
+
+      <footer>
+        <strong>整理范围：</strong>从 CS336 Lecture 10 的学习切入，到 CPU 检索、page 组织、更新、GPU kernel 与 novelty 验证。链接核对日期：2026-09-22。实验建议属于研究规划；本文没有声称已经复现论文或获得新的实验结果。
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const contextInput = document.querySelector('#context');
+    const pageInput = document.querySelector('#page-size');
+    const selectedInput = document.querySelector('#selected-pages');
+    const integerFormat = new Intl.NumberFormat('en-US');
+
+    function formatBytes(bytes) {
+      if (bytes >= 1048576) return (bytes / 1048576).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' MiB';
+      return (bytes / 1024).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' KiB';
+    }
+
+    function calculatePageCost() {
+      const tokens = Number(contextInput.value);
+      const pageSize = Number(pageInput.value);
+      const pageCount = Math.ceil(tokens / pageSize);
+      selectedInput.max = pageCount;
+      const selected = Math.min(pageCount, Math.max(1, Math.floor(Number(selectedInput.value) || 1)));
+      selectedInput.value = selected;
+      const pageBytes = 2 * pageSize * 128 * 2;
+      document.querySelector('#page-count').textContent = integerFormat.format(pageCount);
+      document.querySelector('#page-bytes').textContent = formatBytes(pageBytes);
+      document.querySelector('#chosen-tokens').textContent = integerFormat.format(selected * pageSize);
+      document.querySelector('#head-bytes').textContent = formatBytes(selected * pageBytes);
+      document.querySelector('#layer-bytes').textContent = formatBytes(selected * pageBytes * 8);
+      document.querySelector('#fraction').textContent = (selected * pageSize / tokens * 100).toFixed(2) + '%';
+    }
+
+    [contextInput, pageInput, selectedInput].forEach(element => element.addEventListener('change', calculatePageCost));
+
+    let activeCategory = 'all';
+    const paperCards = [...document.querySelectorAll('.paper')];
+    const searchInput = document.querySelector('#paper-search');
+
+    function filterPapers() {
+      const query = searchInput.value.trim().toLowerCase();
+      let visible = 0;
+      paperCards.forEach(card => {
+        const categoryMatches = activeCategory === 'all' || card.dataset.category === activeCategory;
+        const textMatches = card.textContent.toLowerCase().includes(query);
+        card.hidden = !(categoryMatches && textMatches);
+        if (!card.hidden) visible += 1;
+      });
+      document.querySelector('#paper-count').textContent = '显示 ' + visible + ' / ' + paperCards.length + ' 篇论文与资料';
+      document.querySelector('#empty-state').hidden = visible !== 0;
+    }
+
+    document.querySelectorAll('[data-filter]').forEach(button => {
+      button.addEventListener('click', () => {
+        activeCategory = button.dataset.filter;
+        document.querySelectorAll('[data-filter]').forEach(item => {
+          const isActive = item === button;
+          item.classList.toggle('active', isActive);
+          item.setAttribute('aria-pressed', String(isActive));
+        });
+        filterPapers();
+      });
+    });
+
+    searchInput.addEventListener('input', filterPapers);
+    calculatePageCost();
+    filterPapers();
+  </script>
+</body>
+</html>

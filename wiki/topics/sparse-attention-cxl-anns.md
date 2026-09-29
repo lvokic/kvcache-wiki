@@ -8,6 +8,7 @@
 
 | 论文 | Sparse attention | CXL | ANNS/vector index | 系统边界 |
 |---|---|---|---|---|
+| [MInference](../sources/minference.md) | 是，长上下文 prefill 的 head-specific structured sparsity | 否 | 否；临时生成稀疏 mask，不是 ANN 图 | 离线选 pattern，按 prompt 构造稀疏位置，运行定制 GPU kernels |
 | [RetrievalAttention](../sources/retrievalattention.md) | 是 | 否，CPU memory | 是，attention-aware key graph | sparse retrieval + ANN；固定上下文离线建索引 |
 | [CXL-ANNS](../sources/cxl-anns.md) | 否 | 是 | 是，通用 graph ANNS | 不处理 KV 或 query/key OOD |
 | [SAC](../sources/sac.md) | 是，DeepSeek DSA | 是 | 否，使用模型的 top-k indexer | CXL 负责 KV payload 按需读取，不含 ANN 图搜索 |
@@ -26,7 +27,7 @@
 | [PNM-KV](../sources/pnm-kv.md) | 有 token/page selection | 是，CXL-attached PNM | 否 | 选择与 attention 部分移到定制近存加速器 |
 | [TRACE](../sources/trace-cxl.md) | 否 | 是，CXL.mem | 否 | 设备内部 bit-plane layout、压缩和精度相关读取 |
 
-这张矩阵区分两种常被统称为“index”的组件：DSA 的 learned score indexer 产生 token 排序；ANN/vector index 负责从大量向量中找到候选。SAC 已展示前者与 CXL KV pool 配合，RetrievalAttention 展示后者用于 attention token selection；把后者放进 CXL 则要额外解决图遍历的远端指针依赖。
+这张矩阵区分几种常被混称为“index”的机制：MInference 生成的是当前 prefill 的稀疏 attention mask；DSA 的 learned score indexer 产生 token 排序；ANN/vector index 负责从大量向量中找到候选。SAC 已展示 learned indexer 与 CXL KV pool 配合，RetrievalAttention 展示 ANN 用于 attention token selection；把 ANN 图放进 CXL 则要额外解决图遍历的远端指针依赖。
 
 ## 三层设计空间
 
@@ -52,6 +53,8 @@ SAC 的结果说明 DSA 可以先在 GPU 选出 top-k，再让 GPU kernel 从 CX
 
 ### Sparse attention 减少读取量，仍会受容量和控制路径约束
 
+[MInference](../sources/minference.md) 提供一个不同阶段的参照：它在 prefill 中按 head 选择 A-shape、Vertical-Slash 或 Block-Sparse pattern，再针对当前 prompt 构造临时 mask 并执行稀疏 GPU kernel。论文报告单 A100 上 1M prompt prefill 最高 10× 加速；但较短上下文时 mask 构建成本占比升高。它没有构造持久 ANN 索引，也没有处理 decode 阶段的跨轮 KV 检索、CXL placement 或多租户索引生命周期。这里的区别说明，“动态稀疏”可能指 prompt 内随输入变化，也可能指逐 decode step 搜索已有 KV，不能仅凭术语认为它们解决同一个系统问题。
+
 DeepSeek-V3.2 的 DSA 将主 attention 限定在少量 KV entries，但 lightning indexer 仍对历史位置打分。ECHO 进一步指出，native sparsity 并不消除完整 KV 生命周期和并发容量压力，于是采用 host offload、GPU cache 和 GPU graph 内 cache manager。SAC 则将 DSA top-k payload 按需放在 CXL pool；但它不使用 ANNS。
 
 RetroInfer 则把 index 与 buffer manager 联合优化：centroids/metadata 驻 GPU，KV blocks 驻 CPU 并聚类访问。这给 CXL 扩展提供可讨论的布局基线，但该论文使用 CPU DRAM + PCIe 测量，没有 CXL 结果。
@@ -69,6 +72,8 @@ RetroInfer 则把 index 与 buffer manager 联合优化：centroids/metadata 驻
 selector/质量轴也应单独控制： [Louver](../sources/louver.md) 的零 false negative 是阈值相对保证，不等同固定 top-k 或输出误差界；[Verified vAttention](../sources/vattention-verified.md) 给 sparse attention 近似误差保证；[MiniMax Sparse Attention](../sources/minimax-sparse-attention.md) 使用 per-GQA-group 训练 selector；[Self-Indexing KVCache](../sources/self-indexing-kvcache.md) 与 [SALS](../sources/sals.md) 则探索压缩表示兼作检索空间。它们帮助固定并说明 selection 契约，但不代替同一选集下的执行成本实验。
 
 ## 一个可检验的组合架构（推论）
+
+并发 IVF 的相邻证据现整理在[动态 IVF 与并发读写](../analysis/concurrent-ivf-read-write.md)：HAKES 测量 CPU 侧 IVF-style index 的 concurrent read-write，SIVF 研究 GPU 上的流式插入与并发查询。它们可补充 CXL-Vector 的基线设计，但并未评估 CXL-attached memory 上的并发列表访问。
 
 以下是跨论文综合出来的研究假设，不是任何单篇论文已实现的系统：
 
@@ -89,8 +94,9 @@ selector/质量轴也应单独控制： [Louver](../sources/louver.md) 的零 fa
 
 ## 建议阅读路径
 
-1. [RetrievalAttention](../sources/retrievalattention.md) → [RoarGraph](../sources/roargraph.md)：attention query-key OOD 与 ANN 图投影。
-2. [CXL-ANNS](../sources/cxl-anns.md) → [Beluga](../sources/beluga.md)：CXL 图索引与 CXL KV pool 两种 placement/data path。
-3. [DeepSeek-V3.2](../sources/deepseek-v3-2.md) → [SAC](../sources/sac.md) → [ECHO](../sources/echo.md)：native sparse score indexer 到 CXL/host offload。
-4. [RetroInfer](../sources/retroinfer.md)：attention-aware index、KV block locality 与异构 buffer manager。
-5. 回到 [KV cache 管理与 serving 总览](kv-cache-management.md) 和 [From Tensor Buffer survey](../sources/distributed-kv-hierarchy-survey.md)，把索引路径放回 lifetime、ownership 和 substrate 维度。
+1. [MInference](../sources/minference.md)：prefill 的 per-head 结构化稀疏模式，与 decode 阶段 KV 检索区分。
+2. [RetrievalAttention](../sources/retrievalattention.md) → [RoarGraph](../sources/roargraph.md)：attention query-key OOD 与 ANN 图投影。
+3. [CXL-ANNS](../sources/cxl-anns.md) → [Beluga](../sources/beluga.md)：CXL 图索引与 CXL KV pool 两种 placement/data path。
+4. [DeepSeek-V3.2](../sources/deepseek-v3-2.md) → [SAC](../sources/sac.md) → [ECHO](../sources/echo.md)：native sparse score indexer 到 CXL/host offload。
+5. [RetroInfer](../sources/retroinfer.md)：attention-aware index、KV block locality 与异构 buffer manager。
+6. 回到 [KV cache 管理与 serving 总览](kv-cache-management.md) 和 [From Tensor Buffer survey](../sources/distributed-kv-hierarchy-survey.md)，把索引路径放回 lifetime、ownership 和 substrate 维度。

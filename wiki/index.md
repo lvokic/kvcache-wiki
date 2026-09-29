@@ -1,6 +1,6 @@
 # Wiki index
 
-**Scope:** LLM KV cache management and serving systems, with a current emphasis on sparse attention, ANNS indexing, and memory tiers. The ingested set contains two surveys and 37 systems/algorithm papers, including the owner's anonymized CXL-Vector submission manuscript.
+**Scope:** LLM KV cache management and serving systems, with a current emphasis on sparse attention, ANNS indexing, and memory tiers. The ingested set contains two surveys and 40 systems/algorithm papers, including the owner's anonymized CXL-Vector submission manuscript.
 
 ## Overview
 
@@ -35,6 +35,7 @@
 
 ### Sparse attention and vector retrieval
 
+- [MInference 1.0](sources/minference.md) — per-head dynamic sparse patterns and GPU kernels for long-context prefill; NeurIPS 2024.
 - [Quest](sources/quest.md) — query-aware KV page selection from per-page key bounds; ICML 2024.
 - [DeepSeek-V3.2](sources/deepseek-v3-2.md) — native sparse attention with a trained lightweight token indexer; arXiv v1, 2025.
 - [RetrievalAttention](sources/retrievalattention.md) — OOD-aware ANNS over KV keys with CPU/GPU co-execution; NeurIPS 2025.
@@ -47,6 +48,8 @@
 - [Self-Indexing KVCache](sources/self-indexing-kvcache.md) — compressed sign-based keys double as the sparse retrieval structure; AAAI 2026.
 - [SALS](sources/sals.md) — latent-space KV compression and sparse selection with RoPE-aware design; arXiv 2025.
 - [FreshDiskANN](sources/freshdiskann.md) — concurrent graph-ANN insert/delete/search and streaming index maintenance; arXiv 2021.
+- [HAKES](sources/hakes.md) — compressed IVF-style filter-and-refine index with measured concurrent read-write workloads; PVLDB 2025.
+- [SIVF](sources/sivf.md) — GPU-resident IVF with concurrent streaming insertion, search, and deletion; HPDC 2026 (archived arXiv v3).
 
 ### CXL and sparse-attention serving
 
@@ -70,8 +73,8 @@ _No standalone entity pages yet._
 
 ## Analysis
 
-_No saved query analyses yet._
+- [Dynamic IVF and concurrent read-write](analysis/concurrent-ivf-read-write.md) — compares HAKES and SIVF, separates update maintenance from true concurrent query/insert serving, and maps the evidence to CPU+CXL.
 
 ## Raw queue
 
-All 39 PDFs currently in `raw/papers/` have a source note. The complete paper catalog is [raw/papers/README.md](../raw/papers/README.md).
+All 42 PDFs currently in `raw/papers/` have a source note. The complete paper catalog is [raw/papers/README.md](../raw/papers/README.md).

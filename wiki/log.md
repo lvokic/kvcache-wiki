@@ -46,3 +46,16 @@ Append new entries below. Use the format `## [YYYY-MM-DD] kind | description`.
 - Added CXL data-path and ANN comparisons: [Exploring CXL KV Storage](sources/exploring-cxl-kv-storage.md), [COSMOS](sources/cosmos-cxl-anns.md), [PNM-KV](sources/pnm-kv.md), and [TRACE](sources/trace-cxl.md).
 - Moved all new PDFs into `raw/papers/`, preserving the supplied CXL-Vector filename and contents, and appended all 21 entries to [the paper catalog](../raw/papers/README.md).
 - Updated the [index](index.md), [overview](overview.md), [KV cache topic](topics/kv-cache-management.md), and [sparse attention/CXL/ANNS synthesis](topics/sparse-attention-cxl-anns.md). The refreshed synthesis narrows the proposal hypothesis to fixed-selection, physical-footprint-aware routing within a KV group; this remains an experimental question, not an established novelty claim.
+
+## [2026-09-29] ingest | MInference 1.0
+
+- Added the official arXiv v2 PDF, [MInference 1.0](sources/minference.md), and its entry in [the paper catalog](../raw/papers/README.md).
+- Updated the [sparse attention/CXL/ANNS synthesis](topics/sparse-attention-cxl-anns.md), [KV cache management topic](topics/kv-cache-management.md), [overview](overview.md), and [index](index.md).
+- Recorded the scope distinction: MInference builds prompt-specific structured sparse masks for prefill; it does not provide a persistent ANN index or CXL-backed decode KV retrieval path.
+
+## [2026-09-29] ingest | HAKES and SIVF
+
+- Added the public arXiv PDFs for [HAKES](../raw/papers/hakes-arxiv25.pdf) and [SIVF](../raw/papers/sivf-arxiv26.pdf) to `raw/papers/`, preserving the papers as source material; appended both entries to the paper catalog.
+- Created source notes for [HAKES](sources/hakes.md) and [SIVF](sources/sivf.md), and added [a durable comparison](analysis/concurrent-ivf-read-write.md) focused on concurrent queries and inserts.
+- HAKES contributes CPU-oriented IVF-style concurrent read-write measurements; SIVF contributes a GPU-resident streaming IVF publication protocol. Their hardware scopes are distinct, and neither evaluates CPU+CXL list access.
+- Updated the sparse-attention/CXL/ANNS synthesis, overview, and index; corrected the catalog count to 42 PDFs.

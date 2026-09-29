@@ -43,3 +43,6 @@ This is the complete catalog of ingested paper PDFs in this repository. The sour
 - [TRACE: Unlocking Effective CXL Bandwidth — arXiv v3, 2026](trace-cxl-arxiv26.pdf)
 - [FreshDiskANN — arXiv 2021](freshdiskann-arxiv21.pdf)
 - [LayerKV — arXiv v3, 2024](layerkv-arxiv24.pdf)
+- [MInference 1.0: Accelerating Pre-filling for Long-Context LLMs via Dynamic Sparse Attention — NeurIPS 2024](minference-neurips24-2407.02490.pdf)
+- [HAKES: Scalable Vector Database for Embedding Search Service — PVLDB 2025; archived arXiv version](hakes-arxiv25.pdf)
+- [SIVF: GPU-Resident IVF Index for Streaming Vector Analytics — HPDC 2026; archived arXiv v3](sivf-arxiv26.pdf)

@@ -54,6 +54,8 @@ KV 可以放在 GPU HBM、host DRAM、SSD、远程节点或 memory pool；这些
 
 PagedAttention 和 vAttention 对比 allocator/地址空间抽象；FlashInfer 关注 kernel 如何消费分页、稀疏和变长 layout；DistServe、Mooncake 与 CacheGen 关注 KV 如何跨阶段、请求或节点移动。把这些工作统称为“KV cache optimization”会掩盖它们分别优化的路径。
 
+[MInference](../sources/minference.md) 补充了 prefill 侧的计算优化：它在 prompt 处理阶段构造逐 head 的动态稀疏 mask，并用 GPU kernels 执行；论文还将其与 decode 阶段的 SnapKV 压缩组合测试。这个组合展示两个阶段的优化可以互补，但 MInference 本身不管理 decode KV 的驻留、跨轮更新或 CXL placement。
+
 ### 论文数字还不能组成统一排行榜
 
 不同论文分别报告 throughput、SLO goodput、KV 压缩率、request capacity、kernel latency 或质量。模型、硬件、网络、trace 和基线各异。2026 survey §5.5 指出，remote access pattern、metadata path cost、completion overhead、lifetime/reuse distance、prefetchability、P99 attribution 和公开 trace 尤其缺乏。
